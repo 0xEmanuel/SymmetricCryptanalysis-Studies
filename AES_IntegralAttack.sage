@@ -39,12 +39,12 @@ def AES(state, key_state, full_rounds):
     state = rgf.shift_rows(state)
     state = rgf.mix_columns(state)  
     state = rgf.add_round_key(state,round_key)
-        
-    activatedBytes.append(rgf._GF_to_hex(state[0,0]))
-    
+           
     print("Round",i+1)
     print(state)
 
+
+  activatedBytes.append(rgf._GF_to_hex(state[0,0]))
   #final round
   round_key = key_schedule[full_rounds+1]
   state = rgf.sub_bytes(state)
