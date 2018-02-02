@@ -9,12 +9,13 @@
 ############################## GLOBALS
 
 from sage.crypto.mq.rijndael_gf import RijndaelGF
-rgf = RijndaelGF(4, 6)
+rgf = RijndaelGF(4, 4)
 
 
 preparedInputList = []
 
 activatedBytes = []
+states = []
 
 ############################## AES
 
@@ -27,63 +28,119 @@ def createInputList():
     #print(preparedInput)
     
 
-def AES(state, key_state, full_rounds):
+def AES(state, key_state, full_rounds, collectActiveBytes):
   key_schedule = rgf.expand_key(key_state)
 
+  print "0. Round"
+
   first_round_key = key_schedule[0]
+  print "Round Key: ", rgf._GF_to_hex(first_round_key)
+  
   state = rgf.add_round_key(state,first_round_key)
+  print "After AddRoundKey: ", rgf._GF_to_hex(state)
 
   for i in range(0,full_rounds):
+    print i+1,". Round"
     round_key = key_schedule[i+1]
+    print "Round Key: ", rgf._GF_to_hex(round_key)
+    
     state = rgf.sub_bytes(state)
+    print "After SubBytes: ", rgf._GF_to_hex(state)
+    
     state = rgf.shift_rows(state)
+    print "After ShitRows: ", rgf._GF_to_hex(state)
+    
     state = rgf.mix_columns(state)  
+    print "After MixColumn: ", rgf._GF_to_hex(state)
+    
     state = rgf.add_round_key(state,round_key)
-           
-    print("Round",i+1)
-    print(state)
+    print "After AddRoundKey: ", rgf._GF_to_hex(state)
+    
 
-
-  activatedBytes.append(rgf._GF_to_hex(state[0,0]))
+  if collectActiveBytes:
+    activatedBytes.append(rgf._GF_to_hex(state[0,0]))
+    states.append(rgf._GF_to_hex(state))
+    
+  print full_rounds+1,". Round (Final):"  
   #final round
   round_key = key_schedule[full_rounds+1]
+  print "Round Key: ", rgf._GF_to_hex(round_key)
+  
   state = rgf.sub_bytes(state)
+  print "After SubBytes: ", rgf._GF_to_hex(state)
+  
   state = rgf.shift_rows(state)
+  print "After ShitRows: ", rgf._GF_to_hex(state)
+  
   state = rgf.add_round_key(state,round_key)
+  print "After AddRoundKey: ", rgf._GF_to_hex(state)
 
-  print("Last round:")
-  print(state)
   return state
 
 def checkBalanceProperty():
   balance = 0
-  for activeByteStr in activatedBytes:
-    activeByte = int(activeByteStr, 16)
-    #print("activeByte: ", activeByte)
-    balance = balance ^^ activeByte
-    print("balance: ", balance)
+  #for activeByteStr in activatedBytes:
+  #  activeByte = int(activeByteStr, 16)
+  #  #print("activeByte: ", activeByte)
+  #  balance = balance ^^ activeByte
+  #  print("balance: ", balance)
+  
+  for stateStr in states:
+    stateInt = int(stateStr, 16)
+    print "stateInt: ", hex(stateInt)
+    balance = balance ^^ stateInt
+    print "balance: ", hex(balance)
     
   print("final balance: ", balance)
     
-  
+def IntegralAttak():
+  key_state = rgf._hex_to_GF('2b7e151628aed2a6abf7158809cf4f3c')
+  createInputList()
+  for preparedInput in preparedInputList:
+    print(preparedInput)
+    AES(rgf._hex_to_GF(preparedInput), key_state, 3, true)
 
+  #print(activatedBytes)
+  checkBalanceProperty()
+
+  
 ############################## MAIN
 
 #K = GF(2^8,'x', x^8 + x^4 + x^3 + x + 1 )
 #M = MatrixSpace(K, 4, 4)
 
-#state = rgf._hex_to_GF('11223344556677889912131415161718') # 16 Bytes
-key_state = rgf._hex_to_GF('331D0084B176C3FB59CAA0EDA271B565BB5D9A2D1E4B2892')
-#AES(state, key_state, 3)
+state = rgf._hex_to_GF('3243f6a8885a308d313198a2e0370734') # 16 Bytes
+key_state = rgf._hex_to_GF('2b7e151628aed2a6abf7158809cf4f3c') # 16 Bytes
+#AES(state, key_state, 3, false)
 
-createInputList()
+IntegralAttak()
 
-for preparedInput in preparedInputList:
-  print(preparedInput)
-  AES(rgf._hex_to_GF(preparedInput), key_state, 3)
-
-#print(activatedBytes)
-checkBalanceProperty()
-
+######## OUTPUT
+#0. Round                                                                                                                                                                                                                      
+#Round Key:  2b7e151628aed2a6abf7158809cf4f3c                                                                                                                                                                                  
+#After AddRoundKey:  193de3bea0f4e22b9ac68d2ae9f84808                                                                                                                                                                          
+#1 . Round                                                                                                                                                                                                                     
+#Round Key:  a0fafe1788542cb123a339392a6c7605
+#After SubBytes:  d42711aee0bf98f1b8b45de51e415230
+#After ShitRows:  d4bf5d30e0b452aeb84111f11e2798e5
+#After MixColumn:  046681e5e0cb199a48f8d37a2806264c
+#After AddRoundKey:  a49c7ff2689f352b6b5bea43026a5049
+#2 . Round
+#Round Key:  f2c295f27a96b9435935807a7359f67f
+#After SubBytes:  49ded28945db96f17f39871a7702533b
+#After ShitRows:  49db873b453953897f02d2f177de961a
+#After MixColumn:  584dcaf11b4b5aacdbe7caa81b6bb0e5
+#After AddRoundKey:  aa8f5f0361dde3ef82d24ad26832469a
+#3 . Round
+#Round Key:  3d80477d4716fe3e1e237e446d7a883b
+#After SubBytes:  ac73cf7befc111df13b5d6b545235ab8
+#After ShitRows:  acc1d6b8efb55a7b1323cfdf457311b5
+#After MixColumn:  75ec0993200b633353c0cf7cbb25d0dc
+#After AddRoundKey:  486c4eee671d9d0d4de3b138d65f58e7
+#4 . Round (Final):
+#Round Key:  ef44a541a8525b7fb671253bdb0bad00
+#After SubBytes:  52502f2885a45ed7e311c807f6cf6a94
+#After ShitRows:  52a4c89485116a28e3cf2fd7f6505e07
+#After AddRoundKey:  bde06dd52d43315755be0aec2d5bf307
 
   
