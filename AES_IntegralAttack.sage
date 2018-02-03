@@ -8,17 +8,7 @@ VERBOSE = false
 from sage.crypto.mq.rijndael_gf import RijndaelGF
 rgf = RijndaelGF(4, 4)
 
-
-pairs = []
-
-activatedBytes = []
-states = []
-
-thirdRoundStates = []
-
-afterLastSubBytesStates = []
-afterLastShiftRowsStates = []
-afterLastAddRoundKeyStates = []
+allKeyByteCandidates = []
 
 ############################## AES
 
@@ -27,7 +17,7 @@ def _print(text):
     print text 
     
 
-def AES(state, key_state, full_rounds, collectStates): # collectStates=false -> AES-Only / true -> collect States for IntegralAttack
+def AES(state, key_state, full_rounds):
   key_schedule = rgf.expand_key(key_state)
 
   _print("0. Round")
@@ -55,138 +45,111 @@ def AES(state, key_state, full_rounds, collectStates): # collectStates=false -> 
     state = rgf.add_round_key(state,round_key)
     _print("After AddRoundKey: " + rgf._GF_to_hex(state) )
     
-
-  if collectStates:
-    activatedBytes.append(rgf._GF_to_hex(state[0,0]))
-    states.append(rgf._GF_to_hex(state))
-    
+  ###final round 
   _print(str(full_rounds+1) + ". Round (Final):")
-  #final round
+  
   round_key = key_schedule[full_rounds+1]
   _print("Round Key: " + rgf._GF_to_hex(round_key) )
   
   state = rgf.sub_bytes(state)
   _print("After SubBytes: " + rgf._GF_to_hex(state) )
-  if collectStates:
-    afterLastSubBytesStates.append(rgf._GF_to_hex(state))
   
   state = rgf.shift_rows(state)
   _print("After ShitRows: " + rgf._GF_to_hex(state) )
-  if collectStates:
-    afterLastShiftRowsStates.append(rgf._GF_to_hex(state))
   
   state = rgf.add_round_key(state,round_key)
   _print("After AddRoundKey: " + rgf._GF_to_hex(state) )
-  if collectStates:
-    afterLastAddRoundKeyStates.append(rgf._GF_to_hex(state))
 
   return state
 
-def StateSum(stateList):
-  stateSum = 0
-  #for activeByteStr in activatedBytes:
-  #  activeByte = int(activeByteStr, 16)
-  #  #print("activeByte: ", activeByte)
-  #  balance = balance ^^ activeByte
-  #  print("balance: ", balance)
+def isBalanced(stateSum, bytePosition): # check if the byte at bytePosition is 00
+  bytePosition = bytePosition * 2  
+  if stateSum[bytePosition:bytePosition+2] == '00':
+    return true
+  return false
+
+def StateSum(stateList): ## TODO: Faster if I XOR only the active/relevant byte
+  print "Sum up thirdRoundStates ..."
   
+  stateSum = 0 
   for stateStr in stateList:
     stateInt = int(stateStr, 16)
-    print "stateInt: ", hex(stateInt)
+    #print "stateInt: ", hex(stateInt)
     stateSum = stateSum ^^ stateInt
-    print "intermediate stateSum: ", hex(stateSum)
+    #print "intermediate stateSum: ", hex(stateSum)
     
-  print("stateSum: ", str(hex(stateSum)).zfill(32) )
-  return stateSum 
+  #print "stateSum: " + str(hex(stateSum)).zfill(32)
+  print "stateSum: " + '{:032x}'.format(stateSum)
+  return '{:032x}'.format(stateSum) #zero filled to 32 chars
+ 
+def createKeyGuessByBytePosition(byteIndex, byteGuess):
+  byteIndex = byteIndex * 2
+
+  template = '11111111111111111111111111111111'
+  keyGuess = template[0:byteIndex] + '{:02x}'.format(byteGuess) + template[byteIndex+2:len(template)] #    str(hex(byteGuess)).zfill(2)
+  return keyGuess
  
 def IntegralAttack():
   print "Run IntegralAttack ..."
-  #key_state = rgf._hex_to_GF('11223344556677889910111213141516') # 2b7e151628aed2a6abf7158809cf4f3c
-  #createInputList()
-  #for preparedInput in preparedInputList:
-  #  print(preparedInput)
-  #  AES(rgf._hex_to_GF(preparedInput), key_state, 3, true)
+  
+  #for activeBytePosition in range(0,16):
+  
+  cipherTextList = createPairsByBytePosition(0) 
+  
+  ####
+  keyByteCandidates = [] # candidates for a single keyByte at one fixed position
+  for keyByteGuess in range(0,255): # guess keyByte
+    keyGuess = createKeyGuessByBytePosition(0,keyByteGuess)
+    print "keyGuess: " + keyGuess
+    
+    thirdRoundStates = []
+    ###
+    for cipherText in cipherTextList: #iterate over all cipherTexts. Each ciphertext has only 1 activeByte at a fixed position in this loop       
+      state = rgf.add_round_key(state,rgf._hex_to_GF(keyGuess)) # 'ef111111111111111111111111111111'   'ef44a541a8525b7fb671253bdb0bad00'
+      #print "After InverseAddRoundKey: ", rgf._GF_to_hex(state)
 
-  #print(activatedBytes)
-  #balanced = StateSum(states)
-  #print "balanced: ", hex(balanced)
+      #Its easier to detect the 00-byte if we just skip the InverseShiftRows, so the bytes keep the same index
+      #state = rgf.shift_rows(state, algorithm='decrypt')
+      #print "After InverseShitRows: ", rgf._GF_to_hex(state)
 
-  #afterLastSubBytesStateSum = StateSum(afterLastSubBytesStates)
-  #print "afterLastSubBytesStateSum: ", hex(afterLastSubBytesStateSum)
-  
-  #afterLastShiftRowsStateSum = StateSum(afterLastShiftRowsStates)
-  #print "afterLastShiftRowsStateSum: ", hex(afterLastShiftRowsStateSum)
-  
-  #afterLastAddRoundKeyStateSum = StateSum(afterLastAddRoundKeyStates)
-  #print "afterLastAddRoundKeyStates: ", hex(afterLastAddRoundKeyStateSum)
-  
-  for pair in pairs:
-    cipher = pair[1]
-    
-    #'ef44a541a8525b7fb671253bdb0bad00'
-    
-    #'ef111111111111111111111111111111'
-    #'004f6a95d5768832578d1e338f8fe801'
-    
-    #'11441111111111111111111111111111'
-    ####
-    
-    #'4b87a9fe0b279e5130849f791e36a727'
-    
-    # '4b871111111111111111111111111111'
-    # '0062e33c1c0064dd5089a069293d368e'
-    
-    state = rgf._hex_to_GF(cipher)
-    
-    state = rgf.add_round_key(state,rgf._hex_to_GF('ef44a511111111111111111111111111'))
-    print "After InverseAddRoundKey: ", rgf._GF_to_hex(state)
-
-    #Its easier to detect the 00-byte if we just skip the InverseShiftRows, so the bytes keep the same index
-    #state = rgf.shift_rows(state, algorithm='decrypt')
-    #print "After InverseShitRows: ", rgf._GF_to_hex(state)
-
-    state = rgf.sub_bytes(state, algorithm='decrypt')
-    print "After InverseSubBytes: ", rgf._GF_to_hex(state)
-    
-    thirdRoundStates.append(rgf._GF_to_hex(state))
-  
-  StateSum(thirdRoundStates)
-  
-  #template = '01020304050607080910111213141516'
-  #for i in range(0,1,2): #len(template) iterate over the bytes in the template  
-  #  for j in range(0,256): #create random byte      
-  #    activeByte = str(hex(j))[2:4].zfill(2) # zerofilled hexstring 00...ff
-  #    roundkeyGuess = template[0:i] + activeByte + template[i+2:len(template)] 
-  
-
+      state = rgf.sub_bytes(state, algorithm='decrypt')
+      #print "After InverseSubBytes: ", rgf._GF_to_hex(state)
+      
+      thirdRoundStates.append(rgf._GF_to_hex(state))
+    ###  
+    # after calculating all possible (255) third round states for that keyByteGuess, we need calculate the xor-sum of all states. At the index of the keyByteGuess we need to get a 00-Byte in the sum 
+    stateSum = StateSum(thirdRoundStates)
+    if( isBalanced(stateSum, 0) ): #if state is balanced
+      #do not break loop, since we could have false positives (more key byte candidates)      
+      keyByteCandidates.append(keyByteGuess)    
+  #### finished keyByte guesses at one single position
+  allKeyByteCandidates.append(keyByteCandidates) # add them to the total list
+  print allKeyByteCandidates
   
   
-def createCpaPairs(): 
-  template = '01020304050607080910111213141516' # 16 Bytes
-	      
+def createPairsByBytePosition(index): 
+  index = index * 2 # 1 Byte is 2 digits/chars
+  template = '01020304050607080910111213141516' # 16 Bytes	      
   
   key_state = rgf._hex_to_GF('2b7e151628aed2a6abf7158809cf4f3c') # 16 Bytes #  2b7e151628aed2a6abf7158809cf4f3c   fff22ff4ff5667ff8991ff112131ff16
   #4th roundkey= 4b87a9fe0b279e5130849f791e36a727
   
-  #0,1
-  #2,3
-  #4,5
-  for i in range(4,5,2): #len(template) iterate over the bytes in the template  
-    for j in range(0,256): #create random byte      
-      activeByte = str(hex(j))[2:4].zfill(2) # zerofilled hexstring 00...ff
-      preparedPlaintext = template[0:i] + activeByte + template[i+2:len(template)] 
-      cipherText = rgf._GF_to_hex( AES(rgf._hex_to_GF(preparedPlaintext), key_state, 3, true) )
+  cipherTextList = []
+  for j in range(0,256): #create random byte      
+    activeByte = str(hex(j))[2:4].zfill(2) # zerofilled hexstring 00...ff
+    preparedPlaintext = template[0:index] + activeByte + template[index+2:len(template)] 
+    cipherText = rgf._GF_to_hex( AES(rgf._hex_to_GF(preparedPlaintext), key_state, 3) )
       
-      pair = []
-      pair.append(preparedPlaintext)
-      pair.append(cipherText)
+    #pair = []
+    #pair.append(preparedPlaintext)
+    #pair.append(cipherText)
+    #pairs.append(pair)
+    
+    cipherTextList.append(cipherText)
+    print(preparedPlaintext)
+    #print(cipherText)
       
-      pairs.append(pair)
-      
-      print(preparedPlaintext)
-      #print(cipherText)
-      
-        
+  return cipherTextList    
       
 ############################## MAIN
 
@@ -200,12 +163,14 @@ def createCpaPairs():
 
 
   
-  
-createCpaPairs()
+#createPairsByBytePosition(0)
+#IntegralAttack()
+
+#keyGuess = createKeyGuessByBytePosition(0,0)
+#print "keyGuess: " + keyGuess
+
 IntegralAttack()
 
-
-#IntegralAttack()
 
 
 ######## OUTPUT
