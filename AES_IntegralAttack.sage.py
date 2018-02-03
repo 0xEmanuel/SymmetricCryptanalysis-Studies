@@ -3,8 +3,11 @@
 from sage.all_cmdline import *   # import sage library
 
 _sage_const_3 = Integer(3); _sage_const_2 = Integer(2); _sage_const_1 = Integer(1); _sage_const_0 = Integer(0); _sage_const_4 = Integer(4); _sage_const_255 = Integer(255); _sage_const_256 = Integer(256); _sage_const_16 = Integer(16)# Status:
-# AES template implented
-# to do: implement integral attack
+# IntegralAttack works now over all 16 key bytes of the 4th round key
+# to do: 
+# - check key candidates
+# - need better performance (avoid string operations / _hex_to_GF ? )
+# - xor only the activeByte in isBalanced() for performance
 
 ############################## GLOBALS
 VERBOSE = false
@@ -97,7 +100,7 @@ def IntegralAttack():
   print "Run IntegralAttack ..."
   
   #####
-  for activeBytePosition in range(_sage_const_0 ,_sage_const_16 ):  
+  for activeBytePosition in range(_sage_const_0 ,_sage_const_16 ): #iterate over all 16 key bytes. Each iteration we handle one active byte / key byte at fixed position
     print "activeBytePosition: " + str(activeBytePosition)
     cipherTextList = createPairsByBytePosition(activeBytePosition) 
     
@@ -140,19 +143,13 @@ def createPairsByBytePosition(index):
   index = index * _sage_const_2  # 1 Byte is 2 digits/chars
   template = '01020304050607080910111213141516' # 16 Bytes	      
   
-  key_state = rgf._hex_to_GF('2b7e151628aed2a6abf7158809cf4f3c') # 16 Bytes #  2b7e151628aed2a6abf7158809cf4f3c   fff22ff4ff5667ff8991ff112131ff16
-  #4th roundkey= 4b87a9fe0b279e5130849f791e36a727
+  key_state = rgf._hex_to_GF('2b7e151628aed2a6abf7158809cf4f3c') # 16 Bytes #  2b7e151628aed2a6abf7158809cf4f3c
   
   cipherTextList = []
   for j in range(_sage_const_0 ,_sage_const_256 ): #create random byte      
-    activeByte = str(hex(j))[_sage_const_2 :_sage_const_4 ].zfill(_sage_const_2 ) # zerofilled hexstring 00...ff
+    activeByte = '{:02x}'.format(j) # zerofilled hexstring 00...ff
     preparedPlaintext = template[_sage_const_0 :index] + activeByte + template[index+_sage_const_2 :len(template)] 
     cipherText = rgf._GF_to_hex( AES(rgf._hex_to_GF(preparedPlaintext), key_state, _sage_const_3 ) )
-      
-    #pair = []
-    #pair.append(preparedPlaintext)
-    #pair.append(cipherText)
-    #pairs.append(pair)
     
     cipherTextList.append(cipherText)
     print(preparedPlaintext)
@@ -168,21 +165,13 @@ def createPairsByBytePosition(index):
 #state = rgf._hex_to_GF('3243f6a8885a308d313198a2e0370734') # 16 Bytes
 #key_state = rgf._hex_to_GF('2b7e151628aed2a6abf7158809cf4f3c') # 16 Bytes
 
-#state = AES(state, key_state, 3, false)
-
-
-  
-#createPairsByBytePosition(0)
-#IntegralAttack()
-
-#keyGuess = createKeyGuessByBytePosition(0,0)
-#print "keyGuess: " + keyGuess
+#state = AES(state, key_state, 3)
 
 IntegralAttack()
 
 
 
-######## OUTPUT
+######## AES OUTPUT
 #0. Round                                                                                                                                                                                                                      
 #Round Key:  2b7e151628aed2a6abf7158809cf4f3c                                                                                                                                                                                  
 #After AddRoundKey:  193de3bea0f4e22b9ac68d2ae9f84808                                                                                                                                                                          
@@ -209,21 +198,4 @@ IntegralAttack()
 #After SubBytes:  52502f2885a45ed7e311c807f6cf6a94
 #After ShitRows:  52a4c89485116a28e3cf2fd7f6505e07
 #After AddRoundKey:  bde06dd52d43315755be0aec2d5bf307
-
-########################### TRASH
-
-#afterLastSubBytesStateSum:  8a53233ab66b50406804ced52e2b4505
-#afterLastShiftRowsStateSum:  8a6bce05b604453a682b23402e5350d5
-#afterLastAddRoundKeyStates:  8a6bce05b604453a682b23402e5350d5
-
-
-#state = rgf._hex_to_GF('8a6bce05b604453a682b23402e5350d5')
-#state = rgf.add_round_key(state,rgf._hex_to_GF('ef44a541a8525b7fb671253bdb0bad00')) 
-#print "After InverseAddRoundKey: ", rgf._GF_to_hex(state)
-
-#state = rgf.shift_rows(state, algorithm='decrypt')
-#print "After InverseShitRows: ", rgf._GF_to_hex(state)
-
-#state = rgf.sub_bytes(state, algorithm='decrypt')
-#print "After InverseSubBytes: ", rgf._GF_to_hex(state)
 
