@@ -66,7 +66,7 @@ def AES(state, key_state, full_rounds):
 
   return state
 
-def isBalanced(stateSum, bytePosition): # check if the byte at bytePosition is 00
+def isBalancedByBytePosition(stateSum, bytePosition): # check if the byte at bytePosition is 00
   bytePosition = bytePosition * _sage_const_2   
   if stateSum[bytePosition:bytePosition+_sage_const_2 ] == '00':
     return true
@@ -96,40 +96,45 @@ def createKeyGuessByBytePosition(byteIndex, byteGuess):
 def IntegralAttack():
   print "Run IntegralAttack ..."
   
-  #for activeBytePosition in range(0,16):
-  
-  cipherTextList = createPairsByBytePosition(_sage_const_0 ) 
-  
-  ####
-  keyByteCandidates = [] # candidates for a single keyByte at one fixed position
-  for keyByteGuess in range(_sage_const_0 ,_sage_const_255 ): # guess keyByte
-    keyGuess = createKeyGuessByBytePosition(_sage_const_0 ,keyByteGuess)
-    print "keyGuess: " + keyGuess
+  #####
+  for activeBytePosition in range(_sage_const_0 ,_sage_const_16 ):  
+    print "activeBytePosition: " + str(activeBytePosition)
+    cipherTextList = createPairsByBytePosition(activeBytePosition) 
     
-    thirdRoundStates = []
-    ###
-    for cipherText in cipherTextList: #iterate over all cipherTexts. Each ciphertext has only 1 activeByte at a fixed position in this loop       
-      state = rgf.add_round_key(state,rgf._hex_to_GF(keyGuess)) # 'ef111111111111111111111111111111'   'ef44a541a8525b7fb671253bdb0bad00'
-      #print "After InverseAddRoundKey: ", rgf._GF_to_hex(state)
-
-      #Its easier to detect the 00-byte if we just skip the InverseShiftRows, so the bytes keep the same index
-      #state = rgf.shift_rows(state, algorithm='decrypt')
-      #print "After InverseShitRows: ", rgf._GF_to_hex(state)
-
-      state = rgf.sub_bytes(state, algorithm='decrypt')
-      #print "After InverseSubBytes: ", rgf._GF_to_hex(state)
+    ####
+    keyByteCandidates = [] # candidates for a single keyByte at one fixed position
+    for keyByteGuess in range(_sage_const_0 ,_sage_const_255 ): # guess keyByte
+      keyGuess = createKeyGuessByBytePosition(activeBytePosition,keyByteGuess)
+      print "keyGuess: " + keyGuess
       
-      thirdRoundStates.append(rgf._GF_to_hex(state))
-    ###  
-    # after calculating all possible (255) third round states for that keyByteGuess, we need calculate the xor-sum of all states. At the index of the keyByteGuess we need to get a 00-Byte in the sum 
-    stateSum = StateSum(thirdRoundStates)
-    if( isBalanced(stateSum, _sage_const_0 ) ): #if state is balanced
-      #do not break loop, since we could have false positives (more key byte candidates)      
-      keyByteCandidates.append(keyByteGuess)    
-  #### finished keyByte guesses at one single position
-  allKeyByteCandidates.append(keyByteCandidates) # add them to the total list
+      thirdRoundStates = []
+      ###
+      for cipherText in cipherTextList: #iterate over all cipherTexts. Each ciphertext has only 1 activeByte at a fixed position in this loop       
+	state = rgf._hex_to_GF(cipherText)
+	state = rgf.add_round_key(state,rgf._hex_to_GF(keyGuess)) # 'ef111111111111111111111111111111'   'ef44a541a8525b7fb671253bdb0bad00'
+	#print "After InverseAddRoundKey: ", rgf._GF_to_hex(state)
+
+	#Its easier to detect the 00-byte if we just skip the InverseShiftRows, so the bytes keep the same index
+	#state = rgf.shift_rows(state, algorithm='decrypt')
+	#print "After InverseShitRows: ", rgf._GF_to_hex(state)
+
+	state = rgf.sub_bytes(state, algorithm='decrypt')
+	#print "After InverseSubBytes: ", rgf._GF_to_hex(state)
+	
+	thirdRoundStates.append(rgf._GF_to_hex(state))
+      ###  
+      # after calculating all possible (255) third round states for that keyByteGuess, we need calculate the xor-sum of all states. At the index of the keyByteGuess we need to get a 00-Byte in the sum 
+      stateSum = StateSum(thirdRoundStates)
+      if( isBalancedByBytePosition(stateSum, activeBytePosition) ): #if state is balanced
+	#do not break loop, since we could have false positives (more key byte candidates)      
+	keyByteCandidates.append(keyByteGuess)    
+	print "added keyByteGuess to keyByteCandidates" 
+    #### finished keyByte guesses at one single position
+    allKeyByteCandidates.append(keyByteCandidates) # add them to the total list
+    print keyByteCandidates
+  #####  
   print allKeyByteCandidates
-  
+  return allKeyByteCandidates
   
 def createPairsByBytePosition(index): 
   index = index * _sage_const_2  # 1 Byte is 2 digits/chars
