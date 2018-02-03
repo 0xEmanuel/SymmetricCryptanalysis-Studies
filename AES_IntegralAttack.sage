@@ -91,7 +91,7 @@ def createKeyGuessByBytePosition(byteIndex, byteGuess):
   keyGuess = template[0:byteIndex] + '{:02x}'.format(byteGuess) + template[byteIndex+2:len(template)] #    str(hex(byteGuess)).zfill(2)
   return keyGuess
  
-def IntegralAttack(keyByteGuessList, plainTextTemplate):
+def IntegralAttack(keyByteGuessList, plainTextTemplate): # keyByteGuessList is a nested List [[],[],...,[]], with all possible keyBytes (00...ff) or keyByte candidates (from previous IntegralAttack() run) at every bytePosition. 
   print "Run IntegralAttack ..."
   
   allKeyByteCandidates = []
@@ -226,50 +226,3 @@ print "4th-round key: " + keyBytesToHexString( flatNestedList(keyBytes) )
 #After SubBytes:  52502f2885a45ed7e311c807f6cf6a94
 #After ShitRows:  52a4c89485116a28e3cf2fd7f6505e07
 #After AddRoundKey:  bde06dd52d43315755be0aec2d5bf307
-
-
-### TRASH
-
-#def checkKeyCandidates():
-#  #allKeyByteCandidates = [] # ...
-#  
-#  
-#  allKeyBytes_Result = []
-#  
-#  for activeBytePosition in range(0,16):
-#    print "activeBytePosition: " + str(activeBytePosition)
-#    cipherTextList = createPairsByBytePosition(activeBytePosition, '22222222222222222222222222222222') 
-#    
-#    keyBytes_Result = []
-#    keyByteCandidates = allKeyByteCandidates[activeBytePosition]
-#    for keyByteGuess in keyByteCandidates:
-#      keyGuess = createKeyGuessByBytePosition(activeBytePosition,keyByteGuess)
-#      print "keyGuess: " + keyGuess
-#      
-#      thirdRoundStates = []
-#      ###
-#      for cipherText in cipherTextList: #iterate over all cipherTexts. Each ciphertext has only 1 activeByte at a fixed position in this loop       
-#	state = rgf._hex_to_GF(cipherText)
-#	state = rgf.add_round_key(state,rgf._hex_to_GF(keyGuess)) # 'ef111111111111111111111111111111'   'ef44a541a8525b7fb671253bdb0bad00'
-#	#print "After InverseAddRoundKey: ", rgf._GF_to_hex(state)
-#
-#	#Its easier to detect the 00-byte if we just skip the InverseShiftRows, so the bytes keep the same index
-#	#state = rgf.shift_rows(state, algorithm='decrypt')
-#	#print "After InverseShitRows: ", rgf._GF_to_hex(state)
-#
-#	state = rgf.sub_bytes(state, algorithm='decrypt')
-#	#print "After InverseSubBytes: ", rgf._GF_to_hex(state)
-#	
-#	thirdRoundStates.append(rgf._GF_to_hex(state))
-#      ###  
-#      # after calculating all possible (255) third round states for that keyByteGuess, we need calculate the xor-sum of all states. At the index of the keyByteGuess we need to get a 00-Byte in the sum 
-#      stateSum = StateSum(thirdRoundStates)
-#      if( isBalancedByBytePosition(stateSum, activeBytePosition) ): #if state is balanced
-#	#do not break loop, since we could have false positives (more key byte candidates)      
-#	keyBytes_Result.append(keyByteGuess)    
-#	print "added keyByteGuess to keyBytes_Result"       
-#    allKeyBytes_Result.append(keyBytes_Result) # add them to the total list
-#    print keyBytes_Result
-#  #####  
-#  print allKeyBytes_Result
-#  return allKeyBytes_Result
