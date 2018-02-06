@@ -6,6 +6,9 @@ ROUNDS = 10 # /* number of rounds */
 nxt = 0 # /* next unused state variable index */
 dummy = 0 # /* next unused dummy variable index */
 
+#BRANCH_NUMBER = 5
+BRANCH_NUMBER = 4
+
 filename = 'MILP-AES-With-'+str(ROUNDS)+'-Rounds.sage'
 
 f = open(filename,'w')
@@ -21,9 +24,6 @@ def ShiftRows(a): #a[4][4]
       tmp[j] = a[i][(j + i) % 4]
     for j in range(0,4): #(j = 0; j < 4; j++)
       a[i][j] = tmp[j]
-
-#BRANCH_NUMBER = 5
-BRANCH_NUMBER = 4
 
 def MixColumn(a):
   global nxt, dummy
@@ -99,11 +99,4 @@ f.write("solution=p.solve()"+'\n')
 f.write("print \"Minimal number of S-boxes:\", solution"+'\n')
 f.close()
 execfile(filename)
-
-#print "Binary\n", # /* binary constraints */
-#for i in range(0,16): #(i = 0; i < 16; i++) 
-#  print "x" + str(i) +"\n",
-#for i in range(0,dummy): #(i = 0; i < dummy; i++) 
-#  print "d" + str(i) +"\n",
-#print "End\n"
 
