@@ -1,8 +1,6 @@
-# Status:
-# IntegralAttack works now over all 16 key bytes of the 4th round key
-# to do: 
-# - need better performance (avoid string operations / _hex_to_GF ? )
-# - xor only the activeByte in isBalanced() for performance
+
+# IntegralAttack over all 16 key bytes of the 4th round key
+
 
 ############################## GLOBALS
 VERBOSE = false
