@@ -1,2 +1,2 @@
-# SymmetricCryptanalysis_studies
+# SymmetricCryptanalysis-Studies
 A mixed repo with code snippets (from my studies) for AES Integral Attack and MILP-Based Differential Cryptanalysis
